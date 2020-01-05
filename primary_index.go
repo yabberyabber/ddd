@@ -26,7 +26,14 @@ type ListIndex struct {
 
 func (i *ListIndex) Match(val Val, out chan *Record, tID uint64) error {
 	for _, rr := range i.records {
-		if rr.version.existsAt(tID) && val.CompareTo(rr.content[0]) == 0 {
+		if !rr.version.existsAt(tID) {
+			continue
+		}
+		cmp, err := val.CompareTo(rr.content[0])
+		if err != nil {
+			return err
+		}
+		if cmp == 0 {
 			r, err := rr.toRecord(i.schema)
 			if err != nil {
 				return err

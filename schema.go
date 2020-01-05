@@ -8,27 +8,25 @@ type Schema struct {
 	cols []ColumnStat
 }
 
-// RawRecord is how records are stored in the primary index. Elements
-// of the RawRecord corresponds to elements in the table's Schema slice.
-// i.e., table.schema[0] describes the type of RawRecord[0]. This is a
-// more space-efficient representation than Record because each Val doesn't
-// need to point to its type information. Also, when we implement
-// persistance, RawRecords are what will be written to disk.
+// RawRecord is how records are stored in the primary index. Every RawRecord
+// must be as long as the schema for the table - they are complete tuples.
 type RawRecord struct {
-	content []interface{}
+	content []Val
 	version VersionRange
 }
 
 // Record is how records are represented during computation. It is formed
 // as a map for easy handling and all the values are wrapped in a Val so
 // that we don't have to keep looking up type information for each
-// value.
+// value. In many cases, the schema for a Record may not associate with
+// the schema for any existing table (for an example of this, see
+// aggregators.go)
 type Record map[string]Val
 
 func (r Record) String() string {
 	result := ""
 	for key, val := range r {
-		result += fmt.Sprintf("%12s: %#v\n", key, val.raw)
+		result += fmt.Sprintf("%12s: %#v\n", key, val)
 	}
 	return result
 }
@@ -41,19 +39,16 @@ func (r RawRecord) toRecord(s *Schema) (*Record, error) {
 
 	res := Record{}
 	for i, col := range s.cols {
-		res[col.name] = Val{
-			raw: r.content[i],
-			meta: col.meta,
-		}
+		res[col.name] = r.content[i]
 	}
 
 	return &res, nil
 }
 
 func (r Record) toRawRecord(s *Schema, tID uint64) (RawRecord, error) {
-	rrc := make([]interface{}, len(s.cols))
+	rrc := make([]Val, len(s.cols))
 	for idx, col := range s.cols {
-		rrc[idx] = r[col.name].raw
+		rrc[idx] = r[col.name]
 	}
 	return RawRecord{
 		content: rrc,
@@ -63,26 +58,6 @@ func (r Record) toRawRecord(s *Schema, tID uint64) (RawRecord, error) {
 
 type ColumnStat struct {
 	name string
-	meta *TypeMeta
-	defaultGen DefaultGen
+	// meta is of type Val, but really we just use meta.(type) to track type information
+	meta Val
 }
-
-// TypeMeta wraps a type. If we want to support a type in our expressions,
-// it needs to have a TypeMeta struct to explain how to print and compare it.
-type TypeMeta struct {
-	toString func(interface{}) string
-	compare func(interface{}, interface{}) int
-}
-
-// Val is a runtime-typed value in a record. It may have been cleaner to define
-// Val as an interface which defines toString and compare, but then we wouldn't
-// be able to use the TypeMeta types to decribe table schemas.
-type Val struct {
-	raw interface{}
-	meta *TypeMeta
-}
-
-func (v Val) CompareTo(rawVal interface{}) int {
-	return v.meta.compare(v.raw, rawVal)
-}
-

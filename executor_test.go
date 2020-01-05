@@ -11,10 +11,10 @@ import (
 func createDummyTable() *Table {
 	schema := Schema{
 		cols: []ColumnStat{
-			IntColumn("id", Required),
-			StringColumn("name", Required),
-			IntColumn("startTime", DefaultNow),
-			IntColumn("endTime", DefaultVal(nil)),
+			IntColumn("id"),
+			StringColumn("name"),
+			IntColumn("startTime"),
+			IntColumn("endTime"),
 		},
 	}
 	table := Table{
@@ -66,7 +66,7 @@ func TestInsertCount(t *testing.T) {
 
 	assertResultsMatch(t,
 			countChan,
-			[]Record{Record{"COUNT": Val{100, &IntTypeMeta}}})
+			[]Record{Record{"COUNT": IntVal(100)}})
 }
 
 func TestInsertFilterCount(t *testing.T) {
@@ -82,5 +82,5 @@ func TestInsertFilterCount(t *testing.T) {
 
 	assertResultsMatch(t,
 			countChan,
-			[]Record{Record{"COUNT": Val{4, &IntTypeMeta}}})
+			[]Record{Record{"COUNT": IntVal(4)}})
 }

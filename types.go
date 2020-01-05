@@ -2,85 +2,55 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"strings"
+	"reflect"
 )
 
-var (
-	StringTypeMeta = TypeMeta{
-		toString: intToString,
-		compare: compareInt,
-	}
-	IntTypeMeta = TypeMeta{
-		toString: stringToString,
-		compare: compareString,
-	}
-)
+type Val interface{
+	ToString() (string, error)
+	CompareTo(other Val) (int, error)
+}
 
-// DefaultGen is a function that generates a default value for a
-// column (if someone tries to insert a row without providing all
-// values in that row)
-type DefaultGen func(*Table) (interface{}, error)
+type IntVal int
+var intValMeta Val = IntVal(0)
 
-func StringColumn(name string, _ DefaultGen) ColumnStat {
+func (this IntVal) ToString() (string, error) {
+	return fmt.Sprintf("%d", this), nil
+}
+
+func (this IntVal) CompareTo(that Val) (int, error) {
+	intThat, ok := that.(IntVal)
+	if !ok {
+		return 0, fmt.Errorf("Expected IntVal, got %+v", reflect.TypeOf(that))
+	}
+	return int(this - intThat), nil
+}
+
+type StringVal string
+var strValMeta Val = StringVal("")
+
+func (this StringVal) ToString() (string, error) {
+	return fmt.Sprintf("%s", this), nil
+}
+
+func (this StringVal) CompareTo(that Val) (int, error) {
+	thatStr, ok := that.(StringVal)
+	if !ok {
+		return 0, fmt.Errorf("Expected StringVal, got %+v", reflect.TypeOf(that))
+	}
+	return strings.Compare(string(this), string(thatStr)), nil
+}
+
+func StringColumn(name string) ColumnStat {
 	return ColumnStat{
 		name: name,
-		meta: &StringTypeMeta,
+		meta: strValMeta,
 	}
 }
 
-func StringVal(val string) Val {
-	return Val{
-		raw: val,
-		meta: &StringTypeMeta,
-	}
-}
-
-func IntVal(val int) Val {
-	return Val{
-		raw: val,
-		meta: &IntTypeMeta,
-	}
-}
-
-func IntColumn(name string, _ DefaultGen) ColumnStat {
+func IntColumn(name string) ColumnStat {
 	return ColumnStat{
 		name: name,
-		meta: &IntTypeMeta,
+		meta: intValMeta,
 	}
-}
-
-func stringToString(i interface{}) string {
-	return i.(string)
-}
-
-func compareString(i interface{}, j interface{}) int {
-	if i.(string) > j.(string) {
-		return 1
-	}
-	if i.(string) < j.(string) {
-		return -1
-	}
-	return 0
-}
-
-func intToString(i interface{}) string {
-	return fmt.Sprintf("%d", i.(int))
-}
-
-func compareInt(i interface{}, j interface{}) int {
-	return i.(int) - j.(int)
-}
-
-func DefaultNow(_ *Table) (interface{}, error) {
-	return time.Now(), nil
-}
-
-func DefaultVal(val interface{}) DefaultGen {
-	return func(_ *Table) (interface{}, error) {
-		return val, nil
-	}
-}
-
-func Required(_ *Table) (interface{}, error) {
-	return nil, fmt.Errorf("required field not provided")
 }

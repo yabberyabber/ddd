@@ -8,10 +8,7 @@ func countAll(in chan *Record) (chan *Record, error) {
 			i += 1
 		}
 		result := Record{}
-		result["COUNT"] = Val{
-			raw: i,
-			meta: &IntTypeMeta,
-		}
+		result["COUNT"] = IntVal(i)
 		out <- &result
 		close(out)
 	}()

@@ -37,11 +37,11 @@ func main() {
 	// instantiate the table
 	jobSchema := Schema{
 		cols: []ColumnStat{
-			IntColumn("id", Required),
-			StringColumn("name", Required),
-			IntColumn("startTime", DefaultNow),
-			IntColumn("endTime", DefaultVal(nil)),
-			StringColumn("result", DefaultVal("")),
+			IntColumn("id"),
+			StringColumn("name"),
+			IntColumn("startTime"),
+			IntColumn("endTime"),
+			StringColumn("result"),
 		},
 	}
 	jobTable := Table{

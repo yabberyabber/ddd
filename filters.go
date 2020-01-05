@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 )
 
 // applyFilter takes as arguments a Record chan and a boolean expression,
@@ -75,5 +76,9 @@ func (f IntIdentifierExpr) eval(r *Record) (int, error) {
 	if !ok {
 		return 0, fmt.Errorf("identifier %s not defined in record %+v", f, r)
 	}
-	return res.raw.(int), nil
+	resInt, ok := res.(IntVal)
+	if !ok {
+		return 0, fmt.Errorf("type of %s is not int, rather %+v", f, reflect.TypeOf(res))
+	}
+	return int(resInt), nil
 }
