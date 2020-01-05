@@ -5,14 +5,22 @@ import (
 	"reflect"
 )
 
-// applyFilter takes as arguments a Record chan and a boolean expression,
-// checks every record in the input channel against the boolean expression,
-// and sends matching records through the output chan.
-func applyFilter(in chan *Record, filter BoolExpr) (chan *Record, error) {
+
+type FilterExecNode struct {
+	Input ExecNode
+	Filter BoolExpr
+}
+
+func (f FilterExecNode) Results() (chan *Record, error) {
+	in, err := f.Input.Results()
+	if err != nil {
+		return nil, err
+	}
+
 	out := make(chan *Record)
 	go func() {
 		for r := range in {
-			ok, err := filter.eval(r)
+			ok, err := f.Filter.eval(r)
 			if err != nil {
 				panic(err)
 			}
@@ -22,6 +30,7 @@ func applyFilter(in chan *Record, filter BoolExpr) (chan *Record, error) {
 		}
 		close(out)
 	}()
+
 	return out, nil
 }
 

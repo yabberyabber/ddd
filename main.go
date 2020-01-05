@@ -27,15 +27,19 @@ func (t *Table) InsertOne(r Record) error {
 	return t.primary.Insert(rr)
 }
 
-func (t *Table) FullScan() (chan *Record, error) {
-	records := make(chan *Record)
-	go t.primary.Scan(records, t.txMon.newReadTID())
-	return records, nil
+type FullScanExecNode struct {
+	Table *Table
+}
+
+func (f FullScanExecNode) Results() (chan *Record, error) {
+	out := make(chan *Record)
+	go f.Table.primary.Scan(out, f.Table.txMon.newReadTID())
+	return out, nil
 }
 
 func main() {
 	// instantiate the table
-	jobSchema := Schema{
+	schema := Schema{
 		cols: []ColumnStat{
 			IntColumn("id"),
 			StringColumn("name"),
@@ -44,17 +48,17 @@ func main() {
 			StringColumn("result"),
 		},
 	}
-	jobTable := Table{
+	table := Table{
 		primary: &ListIndex{
 			records: []RawRecord{},
-			schema: &jobSchema,
+			schema: &schema,
 		},
-		schema: jobSchema,
+		schema: schema,
 	}
 
 	// populate the table with some test data
 	for i := 0; i < 100; i++ {
-		jobTable.InsertOne(
+		table.InsertOne(
 			Record{
 				"id": IntVal(i),
 				"name": StringVal(fmt.Sprintf("test%d", i)),
@@ -66,13 +70,22 @@ func main() {
 	// TODO: query optimizing...
 
 	// execute the following query 
-	// "SELECT * FROM job WHERE id > 95"
-	scanChan, _ := jobTable.FullScan()
-	filterChan, _ := applyFilter(scanChan, GtExpr{
-		IntIdentifierExpr("id"),
-		RawIntExpr(95),
-	})
-	countChan, _ := countAll(filterChan)
+	// "SELECT * FROM table WHERE id > 95"
+	countQuery := CountExecNode{
+		FilterExecNode{
+			FullScanExecNode{
+				&table,
+			},
+			GtExpr{
+				IntIdentifierExpr("id"),
+				RawIntExpr(95),
+			},
+		},
+	}
 
-	fmtResults(countChan)
+	results, err := countQuery.Results()
+	if err != nil {
+		fmt.Printf("counting results: %v\n", err)
+	}
+	fmtResults(results)
 }

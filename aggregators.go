@@ -1,6 +1,18 @@
 package main
 
-func countAll(in chan *Record) (chan *Record, error) {
+import (
+)
+
+type CountExecNode struct {
+	Input ExecNode
+}
+
+func (c CountExecNode) Results() (chan *Record, error) {
+	in, err := c.Input.Results()
+	if err != nil {
+		return nil, err
+	}
+
 	out := make(chan *Record)
 	go func() {
 		i := 0
@@ -12,5 +24,6 @@ func countAll(in chan *Record) (chan *Record, error) {
 		out <- &result
 		close(out)
 	}()
+
 	return out, nil
 }

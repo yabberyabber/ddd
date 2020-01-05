@@ -61,26 +61,31 @@ func TestInsertCount(t *testing.T) {
 	table := createDummyTable()
 
 	// SELECT COUNT(*) FROM table
-	scanChan, _ := table.FullScan()
-	countChan, _ := countAll(scanChan)
+	countQuery := CountExecNode{
+		FullScanExecNode{table},
+	}
 
-	assertResultsMatch(t,
-			countChan,
-			[]Record{Record{"COUNT": IntVal(100)}})
+	results, err := countQuery.Results()
+	if err != nil {
+		t.Fatalf("error running query: %v\n", err)
+	}
+	assertResultsMatch(t, results, []Record{Record{"COUNT": IntVal(100)}})
 }
 
 func TestInsertFilterCount(t *testing.T) {
 	table := createDummyTable()
 
 	// SELECT COUNT(*) FROM table WHERE id > 95
-	scanChan, _ := table.FullScan()
-	filterChan, _ := applyFilter(scanChan, GtExpr{
-		IntIdentifierExpr("id"),
-		RawIntExpr(95),
-	})
-	countChan, _ := countAll(filterChan)
+	countQuery := CountExecNode{
+		FilterExecNode{
+			FullScanExecNode{table},
+			GtExpr{IntIdentifierExpr("id"), RawIntExpr(95)},
+		},
+	}
 
-	assertResultsMatch(t,
-			countChan,
-			[]Record{Record{"COUNT": IntVal(4)}})
+	results, err := countQuery.Results()
+	if err != nil {
+		t.Fatalf("error running query: %v\n", err)
+	}
+	assertResultsMatch(t, results, []Record{Record{"COUNT": IntVal(4)}})
 }
