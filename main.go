@@ -73,10 +73,5 @@ func main() {
 		RawIntExpr(95),
 	})
 
-	i := 0
-	for r := range filterChan {
-		fmt.Printf("***************** %3d **************\n", i)
-		fmt.Printf("%s", r)
-		i += 1
-	}
+	fmtResults(filterChan)
 }
