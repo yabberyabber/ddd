@@ -72,6 +72,7 @@ func main() {
 		IntIdentifierExpr("id"),
 		RawIntExpr(95),
 	})
+	countChan, _ := countAll(filterChan)
 
-	fmtResults(filterChan)
+	fmtResults(countChan)
 }
