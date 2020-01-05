@@ -15,7 +15,7 @@ type VersionRange struct {
 }
 
 func (v *VersionRange) existsAt(transactionID uint64) bool {
-	if transactionID <= v.min {
+	if transactionID < v.min {
 		return false
 	}
 	if v.max == 0 {
