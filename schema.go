@@ -14,7 +14,10 @@ type Schema struct {
 // more space-efficient representation than Record because each Val doesn't
 // need to point to its type information. Also, when we implement
 // persistance, RawRecords are what will be written to disk.
-type RawRecord []interface{}
+type RawRecord struct {
+	content []interface{}
+	version VersionRange
+}
 
 // Record is how records are represented during computation. It is formed
 // as a map for easy handling and all the values are wrapped in a Val so
@@ -31,15 +34,15 @@ func (r Record) String() string {
 }
 
 func (r RawRecord) toRecord(s *Schema) (*Record, error) {
-	if len(r) != len(s.cols) {
-		return nil, fmt.Errorf("invalid record - record width %d != schema width %d (record is %+v, r[0] is %+v)",
-				len(r), len(s.cols), r, r[0])
+	if len(r.content) != len(s.cols) {
+		return nil, fmt.Errorf("invalid record - record width %d != schema width %d (record is %+v)",
+				len(r.content), len(s.cols), r)
 	}
 
 	res := Record{}
 	for i, col := range s.cols {
 		res[col.name] = Val{
-			raw: r[i],
+			raw: r.content[i],
 			meta: col.meta,
 		}
 	}
@@ -47,12 +50,15 @@ func (r RawRecord) toRecord(s *Schema) (*Record, error) {
 	return &res, nil
 }
 
-func (r Record) toRawRecord(s *Schema) (RawRecord, error) {
-	rr := make([]interface{}, len(s.cols))
+func (r Record) toRawRecord(s *Schema, tID uint64) (RawRecord, error) {
+	rrc := make([]interface{}, len(s.cols))
 	for idx, col := range s.cols {
-		rr[idx] = r[col.name].raw
+		rrc[idx] = r[col.name].raw
 	}
-	return rr, nil
+	return RawRecord{
+		content: rrc,
+		version: VersionRange{tID, 0},
+	}, nil
 }
 
 type ColumnStat struct {

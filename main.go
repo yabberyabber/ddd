@@ -14,10 +14,13 @@ type Table struct {
 	primary PrimaryIndex
 	// indices []Index
 	schema  Schema
+	txMon TransactionManager
 }
 
 func (t *Table) InsertOne(r Record) error {
-	rr, err := r.toRawRecord(&t.schema)
+	tID, commit := t.txMon.newWriteTID()
+	defer commit()
+	rr, err := r.toRawRecord(&t.schema, tID)
 	if err != nil {
 		return err
 	}
@@ -26,7 +29,7 @@ func (t *Table) InsertOne(r Record) error {
 
 func (t *Table) FullScan() (chan *Record, error) {
 	records := make(chan *Record)
-	go t.primary.Scan(records)
+	go t.primary.Scan(records, t.txMon.newReadTID())
 	return records, nil
 }
 

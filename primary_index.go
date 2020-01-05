@@ -3,8 +3,8 @@ package main
 import "fmt"
 
 type PrimaryIndex interface {
-		Match(val Val, out chan *Record) error
-		Scan(out chan *Record) error
+		Match(val Val, out chan *Record, tID uint64) error
+		Scan(out chan *Record, tID uint64) error
 		Insert(RawRecord) error
 
 		/*
@@ -24,9 +24,9 @@ type ListIndex struct {
 	schema *Schema
 }
 
-func (i *ListIndex) Match(val Val, out chan *Record) error {
+func (i *ListIndex) Match(val Val, out chan *Record, tID uint64) error {
 	for _, rr := range i.records {
-		if val.CompareTo(rr[0]) == 0 {
+		if rr.version.existsAt(tID) && val.CompareTo(rr.content[0]) == 0 {
 			r, err := rr.toRecord(i.schema)
 			if err != nil {
 				return err
@@ -37,9 +37,12 @@ func (i *ListIndex) Match(val Val, out chan *Record) error {
 	return nil
 }
 
-func (i *ListIndex) Scan(out chan *Record) error {
+func (i *ListIndex) Scan(out chan *Record, tID uint64) error {
 	fmt.Printf("I am going to scan %d rows\n", len(i.records))
 	for _, rr := range i.records {
+		if !rr.version.existsAt(tID) {
+			continue
+		}
 		r, err := rr.toRecord(i.schema)
 		if err != nil {
 			fmt.Printf("got me an err: %+v\n", err)
